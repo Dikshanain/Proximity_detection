@@ -22,7 +22,7 @@
         ws = new WebSocket("wss://proximity-detection.onrender.com/ws");
 
         const userId = "user_" + Math.floor(Math.random() * 100000);
-        const radiusKm = 0.2; // 200 meters
+        const radiusKm = 30; 
 
         ws.onopen = () => {
           ws.send(JSON.stringify({ type: "identify", user_id: userId, radius_km: radiusKm }));
