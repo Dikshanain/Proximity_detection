@@ -1,0 +1,67 @@
+<!-- client.html -->
+<!DOCTYPE html>
+<html>
+  <body>
+    <button id="start">Enable location + connect</button>
+    <button id="stop">Disconnect</button>
+    <pre id="log"></pre>
+
+    <script>
+      let ws = null;
+      let timer = null;
+
+      const log = (m) => {
+        document.getElementById('log').textContent += m + "\n";
+      };
+
+      document.getElementById('start').onclick = () => {
+        if (!navigator.geolocation) { alert("Geolocation not supported"); return; }
+        if (ws && ws.readyState === WebSocket.OPEN) { log("Already connected"); return; }
+
+        // Change host/port if server not local or running on another machine
+        ws = new WebSocket("wss://YOUR_RENDER_URL/ws");
+
+        const userId = "user_" + Math.floor(Math.random() * 100000);
+        const radiusKm = 0.2; // 200 meters
+
+        ws.onopen = () => {
+          ws.send(JSON.stringify({ type: "identify", user_id: userId, radius_km: radiusKm }));
+          log("Connected as " + userId + " radius_km=" + radiusKm);
+
+          const sendLoc = () => {
+            navigator.geolocation.getCurrentPosition((pos) => {
+              const { latitude, longitude } = pos.coords;
+              ws.send(JSON.stringify({ type: "location", latitude, longitude }));
+              log("Sent location: " + latitude.toFixed(5) + ", " + longitude.toFixed(5));
+            }, (err) => {
+              log("Location error: " + err.message);
+            }, { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 });
+          };
+
+          // Send immediately, then every 15s
+          sendLoc();
+          timer = setInterval(sendLoc, 15000);
+        };
+
+        ws.onmessage = (e) => {
+          const msg = JSON.parse(e.data);
+          if (msg.type === "proximity") {
+            log(`found_nearby=${msg.found_nearby} count=${msg.count_nearby} sample=${JSON.stringify(msg.sample)}`);
+            // If msg.found_nearby is true, trigger your next pipeline here
+          } else if (msg.type === "ack") {
+            log("ACK: radius_km=" + msg.radius_km);
+          } else if (msg.type === "error") {
+            log("Error: " + msg.error);
+          }
+        };
+
+        ws.onerror = () => log("WebSocket error");
+        ws.onclose = () => { log("Disconnected"); if (timer) clearInterval(timer); };
+      };
+
+      document.getElementById('stop').onclick = () => {
+        if (ws) ws.close();
+      };
+    </script>
+  </body>
+</html>
