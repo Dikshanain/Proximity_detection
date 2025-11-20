@@ -8,6 +8,10 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
+# NEW IMPORTS FOR SERVING HTML
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
 load_dotenv()
 
 PORT = int(os.getenv("PORT", "8080"))
@@ -59,7 +63,6 @@ async def ws_endpoint(ws: WebSocket):
             msg = json.loads(raw)
             mtype = msg.get("type")
 
-            # 1) Identify first
             if mtype == "identify":
                 me_id = str(msg.get("user_id", "")).strip()
                 if not me_id:
@@ -73,7 +76,6 @@ async def ws_endpoint(ws: WebSocket):
                 await ws.send_text(json.dumps({"type": "ack", "ok": True, "radius_km": radius_km}))
                 continue
 
-            # 2) Receive location updates
             if mtype == "location":
                 if not me_id:
                     await ws.send_text(json.dumps({"type": "error", "error": "identify_first"}))
@@ -88,10 +90,10 @@ async def ws_endpoint(ws: WebSocket):
                 presence[me_id] = (lat, lon, time.time())
                 prune_stale()
 
-                # 3) Check neighbors within radius
                 found = False
                 count = 0
                 samples = []
+
                 for uid, (olat, olon, _) in presence.items():
                     if uid == me_id:
                         continue
@@ -110,7 +112,6 @@ async def ws_endpoint(ws: WebSocket):
                 }))
                 continue
 
-            # 4) Optional keepalive
             if mtype == "ping":
                 await ws.send_text(json.dumps({"type": "pong"}))
 
@@ -118,7 +119,20 @@ async def ws_endpoint(ws: WebSocket):
         if me_id:
             presence.pop(me_id, None)
 
+
+# ============================================
+# NEW: Serve client.html on root
+# ============================================
+
+# Serve any static files (HTML, JS, CSS)
+app.mount("/static", StaticFiles(directory="."), name="static")
+
+@app.get("/")
+def serve_client():
+    return FileResponse("client.html")
+
+
+# Run locally if needed
 if __name__ == "__main__":
-    # Optional: allow `python server.py` to run uvicorn
     import uvicorn
     uvicorn.run("server:app", host="0.0.0.0", port=PORT, reload=True)
