@@ -118,8 +118,10 @@ async def ws_endpoint(ws: WebSocket):
                 await ws.send_text(json.dumps({"type": "pong"}))
 
     except WebSocketDisconnect:
-        if me_id:
-            presence.pop(me_id, None)
+        # Just log; let prune_stale() remove them after PRESENCE_TTL seconds
+        print("WebSocket disconnected for", me_id)
+        pass
+
 
 
 # ============================================
