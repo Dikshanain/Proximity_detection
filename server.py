@@ -86,6 +86,8 @@ async def ws_endpoint(ws: WebSocket):
                 except Exception:
                     await ws.send_text(json.dumps({"type": "error", "error": "invalid_coordinates"}))
                     continue
+                
+                print("UPDATED:", me_id, lat, lon)
 
                 presence[me_id] = (lat, lon, time.time())
                 prune_stale()

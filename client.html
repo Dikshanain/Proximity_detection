@@ -40,7 +40,7 @@
 
           // Send immediately, then every 15s
           sendLoc();
-          timer = setInterval(sendLoc, 15000);
+          timer = setInterval(sendLoc, 5000);
         };
 
         ws.onmessage = (e) => {
