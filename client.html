@@ -19,7 +19,7 @@
         if (ws && ws.readyState === WebSocket.OPEN) { log("Already connected"); return; }
 
         // Change host/port if server not local or running on another machine
-        ws = new WebSocket("wss://proximity-detection.onrender.com/ws");
+        ws = new WebSocket("wss://proximity-service-production.up.railway.app/ws");
 
         const userId = "user_" + Math.floor(Math.random() * 100000);
         const radiusKm = 30; 
